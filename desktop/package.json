@@ -1,0 +1,41 @@
+{
+  "name": "gameshare-desktop",
+  "version": "0.1.0",
+  "scripts": {
+    "ng": "ng",
+    "build:ui": "ng build",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "build": "npm run build:ui && npm run build:electron",
+    "start": "npm run build && node scripts/run-electron.mjs",
+    "app": "node scripts/run-electron.mjs",
+    "dev": "npm run build:electron && node scripts/run-electron.mjs --dev",
+    "test": "ng test --watch=false",
+    "test:electron": "npm run build:electron && node --test \"dist-electron/**/*.test.js\"",
+    "e2e": "npm run build && playwright test"
+  },
+  "private": true,
+  "packageManager": "npm@11.6.0",
+  "dependencies": {
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.27",
+    "@angular/cli": "^21.2.27",
+    "@angular/compiler-cli": "^21.2.0",
+    "@playwright/test": "1.63",
+    "electron": "^44.9.3",
+    "jsdom": "^28.0.0",
+    "prettier": "^3.8.1",
+    "typescript": "~5.9.2",
+    "vitest": "^4.0.8"
+  },
+  "description": "GameShare - Remote Play privado",
+  "main": "dist-electron/main.js"
+}

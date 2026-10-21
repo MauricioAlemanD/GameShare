@@ -1,0 +1,47 @@
+# Backend de coordinación + servidor STUN/TURN.
+# Uso:  cd deploy && cp .env.example .env  (y rellenar)  &&  docker compose up -d --build
+#
+# En producción, pon delante un proxy inverso con TLS (por ejemplo, Caddy) para servir HTTPS/WSS.
+# Consulta docs/04-backend.md.
+name: gameshare
+
+services:
+  backend:
+    build: ../backend
+    restart: unless-stopped
+    environment:
+      GAMESHARE_ALLOWED_ORIGINS: ${GAMESHARE_ALLOWED_ORIGINS:-app://gameshare}
+      GAMESHARE_HOST_KEY: ${GAMESHARE_HOST_KEY:-}
+      GAMESHARE_TURN_SECRET: ${GAMESHARE_TURN_SECRET:?Define GAMESHARE_TURN_SECRET en deploy/.env}
+      GAMESHARE_STUN_URLS: stun:${PUBLIC_HOST}:3478
+      GAMESHARE_TURN_URLS: turn:${PUBLIC_HOST}:3478?transport=udp,turn:${PUBLIC_HOST}:3478?transport=tcp
+    ports:
+      # Solo en localhost: el acceso externo debe pasar por el proxy TLS.
+      - "127.0.0.1:8080:8080"
+
+  coturn:
+    image: coturn/coturn:4.6
+    restart: unless-stopped
+    # Red del host: TURN necesita un rango amplio de puertos UDP de relay.
+    network_mode: host
+    command:
+      - -n
+      - --log-file=stdout
+      - --listening-port=3478
+      - --fingerprint
+      - --use-auth-secret
+      - --static-auth-secret=${GAMESHARE_TURN_SECRET}
+      - --realm=${PUBLIC_HOST}
+      - --min-port=49160
+      - --max-port=49200
+      - --no-cli
+      - --no-tls
+      - --no-dtls
+      # No permitir que TURN se use para alcanzar redes privadas del servidor.
+      - --no-multicast-peers
+      - --denied-peer-ip=0.0.0.0-0.255.255.255
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=127.0.0.0-127.255.255.255
+      - --denied-peer-ip=169.254.0.0-169.254.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255

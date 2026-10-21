@@ -1,0 +1,26 @@
+# Secretos / configuración local
+.env
+*.local.yml
+*.local.json
+application-local.yml
+
+# Java
+backend/target/
+*.class
+
+# Node / Angular / Electron
+node_modules/
+dist/
+out/
+.angular/
+
+# .NET
+bin/
+obj/
+
+# IDE / SO
+.idea/
+.vscode/
+*.iml
+Thumbs.db
+.DS_Store

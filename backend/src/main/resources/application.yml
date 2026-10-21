@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: gameshare-backend
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: ${PORT:8080}
+  # Detrás de un proxy inverso con TLS (Caddy/nginx) usar "native" para respetar X-Forwarded-For.
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+gameshare:
+  # Orígenes permitidos para REST y WebSocket. La app Electron usa el esquema app://gameshare.
+  allowed-origins: ${GAMESHARE_ALLOWED_ORIGINS:http://localhost:4200,app://gameshare}
+  # Opcional: clave que el anfitrión debe enviar (cabecera X-Host-Key) para crear salas.
+  # Evita que desconocidos usen tu servidor y tu TURN. Defínela por variable de entorno, nunca en el repo.
+  host-key: ${GAMESHARE_HOST_KEY:}
+  invite-ttl: 15m
+  max-active-invites: 3
+  max-guests: 1
+  session-idle-ttl: 12h
+  turn:
+    stun-urls: ${GAMESHARE_STUN_URLS:stun:stun.l.google.com:19302}
+    # Si no hay secreto, solo se ofrece STUN (sin TURN).
+    turn-urls: ${GAMESHARE_TURN_URLS:}
+    secret: ${GAMESHARE_TURN_SECRET:}
+    credential-ttl: 6h
+  rate-limit:
+    rest-per-minute: 120
+    redeem-per-minute: 10
+    ws-messages-per-second: 50
+    ws-burst: 200
+
+logging:
+  level:
+    dev.gameshare: INFO
