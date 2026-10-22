@@ -4,6 +4,8 @@ import { GuestPanel } from './features/guest-panel';
 import { Home } from './features/home';
 import { HostPanel } from './features/host-panel';
 import { SettingsPanel } from './features/settings-panel';
+import { GuestGamepadService } from './input/guest-gamepad.service';
+import { HostInputService } from './input/host-input.service';
 import { StreamingEngine } from './streaming/streaming-engine';
 import { WS_LABEL } from './shared/format';
 
@@ -56,6 +58,9 @@ export class App implements OnInit {
   protected readonly store = inject(SessionStore);
   /** Se crea al arrancar para que el motor escuche las señales desde el principio. */
   protected readonly engine = inject(StreamingEngine);
+  /** Servicios de mando: se crean al arrancar (cada uno solo actúa con su rol). */
+  protected readonly hostInput = inject(HostInputService);
+  protected readonly guestGamepad = inject(GuestGamepadService);
   protected readonly ready = signal(false);
   protected readonly showSettings = signal(false);
   protected readonly wsLabel = WS_LABEL;

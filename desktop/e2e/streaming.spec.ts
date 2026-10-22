@@ -25,10 +25,11 @@ async function expectVideoPlaying(page: Page): Promise<void> {
     undefined,
     { timeout: 20_000 },
   );
-  const t1 = await page.evaluate(() => document.querySelector<HTMLVideoElement>('[data-testid="remote-video"]')!.currentTime);
-  await page.waitForTimeout(1000);
-  const t2 = await page.evaluate(() => document.querySelector<HTMLVideoElement>('[data-testid="remote-video"]')!.currentTime);
-  expect(t2).toBeGreaterThan(t1);
+  // currentTime no es fiable en vídeo en directo (puede retroceder): se cuentan fotogramas decodificados.
+  const frames = () =>
+    page.evaluate(() => document.querySelector<HTMLVideoElement>('[data-testid="remote-video"]')!.getVideoPlaybackQuality().totalVideoFrames);
+  const f1 = await frames();
+  await expect.poll(frames, { timeout: 5000 }).toBeGreaterThan(f1);
 }
 
 test('vídeo y audio de anfitrión a invitada, con estadísticas, silenciado, pausa y revocación', async () => {

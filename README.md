@@ -10,7 +10,7 @@ Aplicación privada para que dos personas jueguen en cooperativo local por Inter
 | 2. Backend MVP | ✅ Implementado · 41 pruebas automáticas en verde |
 | 3. Cliente de escritorio | ✅ Electron + Angular · 50 pruebas (34 unitarias, 5 Electron, 11 e2e con 2 instancias reales) |
 | 4. Streaming | ✅ WebRTC con NVENC (H.264 High por hardware) + audio estéreo · probado en 1 PC · ⏳ falta validar con 2 PCs |
-| 5. Mando remoto | ⏳ Pendiente |
+| 5. Mando remoto | ✅ Mando Xbox virtual (ViGEmBus) verificado con XInput real · ⏳ falta probar con los mandos físicos de la invitada |
 | 6. Pruebas reales | ⏳ Pendiente |
 
 ## Estructura
@@ -18,6 +18,7 @@ Aplicación privada para que dos personas jueguen en cooperativo local por Inter
 ```
 backend/   Spring Boot 4 (Java 21): sesiones, invitaciones, señalización WebSocket
 desktop/   Electron 44 + Angular 21: app de escritorio para anfitrión e invitado
+input-agent/ .NET 8: proceso aislado que crea los mandos Xbox virtuales (ViGEmBus)
 deploy/    docker-compose (backend + coturn) y .env.example
 docs/      arquitectura, licencias, criterios, backend, seguridad
 ```
@@ -49,6 +50,7 @@ Para probar anfitrión e invitado en el mismo PC, consulta [docs/06-escritorio.m
 - [Seguridad: amenazas y mitigaciones](docs/05-seguridad.md)
 - [App de escritorio: comandos, estructura y seguridad](docs/06-escritorio.md)
 - [Streaming: diseño, códecs medidos, latencia y limitaciones](docs/07-streaming.md)
+- [Mando remoto: instalación de ViGEmBus, seguridad y pruebas](docs/08-mando-remoto.md)
 
 ## Requisitos (Windows)
 

@@ -1,4 +1,6 @@
 import { DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { Subject } from 'rxjs';
+import { decodeRumbleFrame, STATE_FRAME_SIZE } from '../input/input-protocol';
 import { ApiService } from '../core/api.service';
 import { BRIDGE, CaptureSource, ipcErrorMessage } from '../core/bridge';
 import { ParticipantView } from '../core/models';
@@ -28,8 +30,14 @@ export class WebRtcEngine extends StreamingEngine {
   readonly remoteStream = signal<MediaStream | null>(null);
   readonly linkState = signal<LinkState>('idle');
   readonly stats = signal<StreamStats | null>(null);
+  readonly inputChannelOpen = signal(false);
+  readonly rumble$ = new Subject<{ large: number; small: number }>();
 
   private readonly peers = new Map<string, PeerLink>();
+  /** Anfitrión: canal de mando de cada invitado. */
+  private readonly hostChannels = new Map<string, RTCDataChannel>();
+  /** Invitado: canal de mando con el anfitrión. */
+  private guestChannel: RTCDataChannel | null = null;
   private readonly creating = new Set<string>();
   private readonly lastRestart = new Map<string, number>();
   private ice: { config: RTCConfiguration; expiresAt: number } | null = null;
@@ -56,7 +64,13 @@ export class WebRtcEngine extends StreamingEngine {
       this.signalQueue = this.signalQueue.then(() => this.onSignal(from, data)).catch((e) => console.warn('Señal', e));
     });
     const timer = setInterval(() => void this.pollStats(), STATS_INTERVAL_MS);
+    // Anfitrión: vibración del juego → canal del invitado correspondiente.
+    const offRumble = this.bridge.onRumble((guestId, frame) => {
+      const ch = this.hostChannels.get(guestId);
+      if (ch?.readyState === 'open') ch.send(new Uint8Array(frame));
+    });
     inject(DestroyRef).onDestroy(() => {
+      offRumble();
       sub.unsubscribe();
       clearInterval(timer);
       this.stopAll();
@@ -173,6 +187,7 @@ export class WebRtcEngine extends StreamingEngine {
         this.setPeerState(guestId, s);
         if (s === 'failed') void this.tryRestart(guestId, link);
       },
+      onInputChannel: (ch) => this.attachHostChannel(guestId, ch),
     });
     this.peers.set(guestId, link);
     this.setPeerState(guestId, 'new');
@@ -193,9 +208,44 @@ export class WebRtcEngine extends StreamingEngine {
     await link.restartIce().catch(() => undefined);
   }
 
+  /** Las tramas del mando van directas al proceso principal, que las valida (permiso, formato, secuencia, frecuencia). */
+  private attachHostChannel(guestId: string, ch: RTCDataChannel): void {
+    this.hostChannels.set(guestId, ch);
+    ch.onopen = () => void this.bridge.resetInput(guestId);
+    ch.onmessage = (ev) => {
+      if (ev.data instanceof ArrayBuffer && ev.data.byteLength === STATE_FRAME_SIZE) {
+        this.bridge.sendInputFrame(guestId, new Uint8Array(ev.data));
+      }
+    };
+  }
+
+  private attachGuestChannel(ch: RTCDataChannel): void {
+    this.guestChannel = ch;
+    ch.onopen = () => this.inputChannelOpen.set(true);
+    ch.onclose = () => {
+      if (this.guestChannel === ch) {
+        this.guestChannel = null;
+        this.inputChannelOpen.set(false);
+      }
+    };
+    ch.onmessage = (ev) => {
+      const r = decodeRumbleFrame(ev.data);
+      if (r) this.rumble$.next(r);
+    };
+  }
+
+  sendInputFrame(frame: Uint8Array): boolean {
+    const ch = this.guestChannel;
+    // Si el canal se satura, se descarta: enviar estados viejos solo añadiría latencia.
+    if (!ch || ch.readyState !== 'open' || ch.bufferedAmount > 4 * STATE_FRAME_SIZE) return false;
+    ch.send(frame as Uint8Array<ArrayBuffer>);
+    return true;
+  }
+
   private closePeer(id: string, notifyPeer: boolean): void {
     const link = this.peers.get(id);
     this.peers.delete(id);
+    this.hostChannels.delete(id);
     link?.close(notifyPeer);
     this.peerStates.update((m) => {
       const { [id]: _removed, ...rest } = m;
@@ -238,6 +288,7 @@ export class WebRtcEngine extends StreamingEngine {
         maxBitrateKbps: 0,
         maxFps: 0,
         onRemoteStream: (s) => this.remoteStream.set(s),
+        onInputChannel: (ch) => this.attachGuestChannel(ch),
         onState: (s) => {
           if (this.peers.get(from) !== created && s !== 'closed') return;
           this.linkState.set(s);
@@ -246,6 +297,8 @@ export class WebRtcEngine extends StreamingEngine {
             if (this.peers.size === 0) {
               this.remoteStream.set(null);
               this.stats.set(null);
+              this.guestChannel = null;
+              this.inputChannelOpen.set(false);
             }
           }
         },
@@ -309,6 +362,9 @@ export class WebRtcEngine extends StreamingEngine {
     this.linkState.set('idle');
     this.stats.set(null);
     this.ice = null;
+    this.hostChannels.clear();
+    this.guestChannel = null;
+    this.inputChannelOpen.set(false);
   }
 }
 

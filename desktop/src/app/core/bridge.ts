@@ -25,6 +25,25 @@ export interface GameShareBridge {
   listCaptureSources(): Promise<CaptureSource[]>;
   /** Autoriza UNA captura de la fuente elegida; después se llama a getDisplayMedia(). */
   selectCaptureSource(id: string): Promise<void>;
+
+  // ---- Mandos remotos (anfitrión)
+  /** Crea (true) o elimina (false) el mando virtual de un invitado. */
+  setGamepadPermission(guestId: string, allowed: boolean): Promise<void>;
+  /** Nueva conexión de datos con el invitado: reinicia la secuencia anti-repetición. */
+  resetInput(guestId: string): Promise<void>;
+  releaseAllInput(): Promise<void>;
+  getInputStatus(): Promise<InputStatus>;
+  /** Trama de estado del mando recibida del invitado (sin respuesta, para no añadir latencia). */
+  sendInputFrame(guestId: string, frame: Uint8Array): void;
+  onInputStatus(callback: (status: InputStatus) => void): () => void;
+  onRumble(callback: (guestId: string, frame: Uint8Array) => void): () => void;
+}
+
+export interface InputStatus {
+  agent: 'starting' | 'ready' | 'unavailable';
+  message: string | null;
+  pads: Record<string, { connected: boolean; xinputIndex: number }>;
+  dropped: number;
 }
 
 export interface CaptureSource {
@@ -77,6 +96,13 @@ function browserBridge(): GameShareBridge {
     // En el navegador, getDisplayMedia() muestra el selector del propio navegador.
     listCaptureSources: async () => [{ id: 'browser', name: 'Selector del navegador', kind: 'screen', thumbnail: '' }],
     selectCaptureSource: async () => {},
+    setGamepadPermission: async () => {},
+    resetInput: async () => {},
+    releaseAllInput: async () => {},
+    getInputStatus: async () => ({ agent: 'unavailable', message: 'Solo disponible en la app de escritorio.', pads: {}, dropped: 0 }),
+    sendInputFrame: () => {},
+    onInputStatus: () => () => {},
+    onRumble: () => () => {},
   };
 }
 

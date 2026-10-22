@@ -1,4 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { HostInputService } from '../input/host-input.service';
 import { SessionStore } from '../core/session.store';
 import { formatStats, formatTime, INVITE_LABEL } from '../shared/format';
 import { HostStream } from './host-stream';
@@ -70,6 +71,12 @@ import { HostStream } from './host-stream';
       </section>
     }
 
+    @if (input.status()?.agent === 'unavailable' && anyGamepad()) {
+      <div class="banner error" data-testid="input-unavailable">
+        <span>🎮 No se puede crear el mando virtual: {{ input.status()?.message }} Consulta docs/08-mando-remoto.md.</span>
+      </div>
+    }
+
     <section class="card">
       <h3>Jugadores</h3>
       <ul class="list">
@@ -90,6 +97,9 @@ import { HostStream } from './host-stream';
               Permitir mando
             </label>
             <button class="danger small" data-testid="revoke" (click)="store.revoke(p.id)">Revocar acceso</button>
+            @if (p.gamepadAllowed) {
+              <div class="stats small" data-testid="virtual-pad">{{ padText(p.id) }}</div>
+            }
             <div class="stats small muted" data-testid="guest-stats">{{ stats(p.stats) }}</div>
           </li>
         } @empty {
@@ -101,7 +111,19 @@ import { HostStream } from './host-stream';
 })
 export class HostPanel {
   protected readonly store = inject(SessionStore);
+  protected readonly input = inject(HostInputService);
   protected readonly confirmClose = signal(false);
+  protected readonly anyGamepad = computed(() => this.store.approvedGuests().some((g) => g.gamepadAllowed));
+
+  protected padText(guestId: string): string {
+    const status = this.input.status();
+    const pad = this.input.padFor(guestId);
+    if (status?.agent === 'unavailable') return '🎮 Mando virtual no disponible.';
+    if (!pad || !pad.connected) return '🎮 Creando mando virtual…';
+    // El índice que informa ViGEm no siempre coincide con el puesto XInput real (medido con un mando físico
+    // conectado), así que no se muestra el número de jugador.
+    return '🎮 Mando virtual Xbox conectado. En el juego será el siguiente jugador libre (normalmente el 2).';
+  }
   protected readonly inviteLabel = INVITE_LABEL;
   protected readonly time = formatTime;
   protected readonly stats = formatStats;

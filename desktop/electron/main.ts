@@ -14,6 +14,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CaptureController } from './capture';
+import { InputAgentProcess } from './input-agent-process';
+import { encodeRumbleFrame, InputGateway } from './input-gateway';
 import { SettingsStore } from './settings';
 import { buildCsp, mimeFor, PROFILE_REGEX } from './validation';
 
@@ -45,6 +47,29 @@ app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 let mainWindow: BrowserWindow | null = null;
 let settings: SettingsStore;
 const capture = new CaptureController(() => mainWindow, (url) => isTrustedUrl(url));
+
+// ---- Mandos remotos: el agente (.NET + ViGEmBus) solo se lanza en el anfitrión al conceder el primer mando.
+const AGENT_EXE =
+  process.env['GAMESHARE_INPUT_AGENT'] || path.resolve(__dirname, '..', '..', 'input-agent', 'dist', 'InputAgent.exe');
+let agentProc: InputAgentProcess | null = null;
+const gateway = new InputGateway(
+  (line) => {
+    if (line.startsWith('C ') && !agentProc) {
+      agentProc = new InputAgentProcess(AGENT_EXE, (l) => gateway.handleAgentLine(l), (m) => gateway.setAgentUnavailable(m));
+      agentProc.start();
+    }
+    agentProc?.send(line);
+  },
+  (status) => sendToUi('input:status', status),
+  (guestId, large, small) => sendToUi('input:rumble', guestId, encodeRumbleFrame(large, small)),
+);
+
+/** Envía un evento a la interfaz solo si la ventana sigue viva (al cerrarse ya no se puede usar). */
+function sendToUi(channel: string, ...args: unknown[]): void {
+  const w = mainWindow;
+  if (!w || w.isDestroyed() || w.webContents.isDestroyed()) return;
+  w.webContents.send(channel, ...args);
+}
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -107,7 +132,11 @@ async function start(): Promise<void> {
   createWindow();
 
   // Atajo de emergencia global: corta la sesión aunque la ventana no tenga el foco.
-  globalShortcut.register(EMERGENCY_SHORTCUT, () => mainWindow?.webContents.send('gameshare:emergency'));
+  // Los mandos virtuales se sueltan aquí mismo, sin esperar a la interfaz.
+  globalShortcut.register(EMERGENCY_SHORTCUT, () => {
+    gateway.releaseAll();
+    sendToUi('gameshare:emergency');
+  });
 }
 
 function createWindow(): void {
@@ -135,7 +164,15 @@ function createWindow(): void {
     Menu.setApplicationMenu(null);
   }
   mainWindow.on('page-title-updated', (e) => e.preventDefault());
-  mainWindow.on('closed', () => (mainWindow = null));
+  mainWindow.on('closed', () => {
+    mainWindow = null; // primero: la ventana ya no existe
+    gateway.releaseAll();
+  });
+  // Si la interfaz se cuelga o se recarga, no puede quedar ningún botón pulsado.
+  mainWindow.webContents.on('render-process-gone', () => gateway.releaseAll());
+  mainWindow.webContents.on('did-start-navigation', (_e, _url, isInPlace, isMainFrame) => {
+    if (isMainFrame && !isInPlace) gateway.releaseAll();
+  });
   void mainWindow.loadURL(DEV_URL ?? `${APP_ORIGIN}/index.html`);
 }
 
@@ -197,6 +234,28 @@ function registerIpc(): void {
     guard(e);
     capture.select(id);
   });
+  // Mandos remotos (anfitrión).
+  ipcMain.handle('input:set-permission', (e, guestId: unknown, allowed: unknown) => {
+    guard(e);
+    gateway.setPermission(String(guestId), allowed === true);
+  });
+  ipcMain.handle('input:reset', (e, guestId: unknown) => {
+    guard(e);
+    gateway.resetSequence(String(guestId));
+  });
+  ipcMain.handle('input:release-all', (e) => {
+    guard(e);
+    gateway.releaseAll();
+  });
+  ipcMain.handle('input:status', (e) => {
+    guard(e);
+    return gateway.status();
+  });
+  // Tramas del mando: sin respuesta (send, no invoke) para no añadir latencia.
+  ipcMain.on('input:frame', (e, guestId: unknown, data: unknown) => {
+    if (!isTrustedUrl(e.senderFrame?.url ?? '')) return;
+    gateway.handleFrame(String(guestId), data);
+  });
   ipcMain.handle('app:info', (e) => {
     guard(e);
     return { version: app.getVersion(), profile };
@@ -212,5 +271,9 @@ app.on('web-contents-created', (_e, contents) => {
   contents.on('will-attach-webview', (e) => e.preventDefault());
 });
 
-app.on('will-quit', () => globalShortcut.unregisterAll());
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+  gateway.releaseAll();
+  agentProc?.stop();
+});
 app.on('window-all-closed', () => app.quit());

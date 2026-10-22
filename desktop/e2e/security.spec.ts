@@ -23,7 +23,8 @@ test('la interfaz no tiene acceso a Node.js', async () => {
 test('el puente expone solo la API prevista', async () => {
   const keys = await inst.page.evaluate(() => Object.keys(window.gameshare ?? {}).sort());
   expect(keys).toEqual([
-    'appInfo', 'copyText', 'getHostKey', 'getSettings', 'listCaptureSources', 'onEmergency', 'selectCaptureSource', 'updateSettings',
+    'appInfo', 'copyText', 'getHostKey', 'getInputStatus', 'getSettings', 'listCaptureSources', 'onEmergency', 'onInputStatus',
+    'onRumble', 'releaseAllInput', 'resetInput', 'selectCaptureSource', 'sendInputFrame', 'setGamepadPermission', 'updateSettings',
   ]);
 });
 

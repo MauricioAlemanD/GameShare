@@ -35,6 +35,13 @@ function setup() {
     onEmergency: vi.fn(() => () => {}),
     listCaptureSources: vi.fn(async () => []),
     selectCaptureSource: vi.fn(async () => {}),
+    setGamepadPermission: vi.fn(async () => {}),
+    resetInput: vi.fn(async () => {}),
+    releaseAllInput: vi.fn(async () => {}),
+    getInputStatus: vi.fn(async () => ({ agent: 'starting' as const, message: null, pads: {}, dropped: 0 })),
+    sendInputFrame: vi.fn(),
+    onInputStatus: vi.fn(() => () => {}),
+    onRumble: vi.fn(() => () => {}),
   };
   const api = {
     createSession: vi.fn(async () => HOST),

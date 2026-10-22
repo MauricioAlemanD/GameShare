@@ -132,4 +132,14 @@ label select { display: block; margin-top: .3rem; }
 .placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); text-align: center; padding: 1rem; }
 .stage-controls { margin-top: .6rem; }
 .chip.relay { color: var(--warn); border-color: var(--warn); }
+
+/* Mando (invitado) */
+.pad-live { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
+.key {
+  min-width: 2rem; text-align: center; padding: .15rem .4rem; border-radius: 5px;
+  border: 1px solid var(--border); color: var(--muted); font-size: .8rem;
+}
+.key.on { background: var(--accent-2); border-color: var(--accent); color: #fff; }
+.sticks { margin-left: .5rem; font-variant-numeric: tabular-nums; }
+p.ok { color: var(--ok); }
 .callout.warn { border: 1px solid var(--warn); }

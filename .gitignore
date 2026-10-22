@@ -24,3 +24,6 @@ obj/
 *.iml
 Thumbs.db
 .DS_Store
+
+# Agente de mandos compilado
+input-agent/dist/

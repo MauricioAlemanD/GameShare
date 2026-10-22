@@ -15,6 +15,13 @@ describe('App', () => {
       onEmergency: () => () => {},
       listCaptureSources: async () => [],
       selectCaptureSource: async () => {},
+      setGamepadPermission: async () => {},
+      resetInput: async () => {},
+      releaseAllInput: async () => {},
+      getInputStatus: async () => ({ agent: 'starting', message: null, pads: {}, dropped: 0 }),
+      sendInputFrame: () => {},
+      onInputStatus: () => () => {},
+      onRumble: () => () => {},
     };
     await TestBed.configureTestingModule({
       imports: [App],

@@ -1,4 +1,5 @@
 import { Signal } from '@angular/core';
+import { Observable } from 'rxjs';
 import { CaptureSource } from '../core/bridge';
 import { QualityPreset, StreamStats, VideoCodec } from './webrtc-utils';
 
@@ -32,6 +33,12 @@ export abstract class StreamingEngine {
   // ---- invitado
   abstract readonly remoteStream: Signal<MediaStream | null>;
   abstract readonly linkState: Signal<LinkState>;
+  /** Canal del mando abierto con el anfitrión. */
+  abstract readonly inputChannelOpen: Signal<boolean>;
+  /** Envía una trama de estado del mando. Devuelve false si no se pudo (canal cerrado o saturado). */
+  abstract sendInputFrame(frame: Uint8Array): boolean;
+  /** Vibración pedida por el juego del anfitrión. */
+  abstract readonly rumble$: Observable<{ large: number; small: number }>;
 
   // ---- ambos
   /** Estadísticas de la conexión principal (envío en el anfitrión, recepción en el invitado). */

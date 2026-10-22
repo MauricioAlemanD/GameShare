@@ -13,7 +13,11 @@ export interface PeerLinkOptions {
   maxFps: number;
   onRemoteStream?: (stream: MediaStream) => void;
   onState?: (state: RTCPeerConnectionState) => void;
+  /** Canal de datos "input" (mando). El anfitrión lo crea; el invitado lo recibe. */
+  onInputChannel?: (channel: RTCDataChannel) => void;
 }
+
+export const INPUT_CHANNEL_LABEL = 'input';
 
 /** Una conexión WebRTC con un participante. El anfitrión solo envía y el invitado solo recibe. */
 export class PeerLink {
@@ -44,6 +48,15 @@ export class PeerLink {
       }
       this.o.onRemoteStream?.(e.streams[0] ?? new MediaStream([e.track]));
     };
+    this.pc.ondatachannel = (e) => {
+      // El invitado solo acepta el canal "input" creado por el anfitrión.
+      if (this.o.role !== 'guest' || e.channel.label !== INPUT_CHANNEL_LABEL) {
+        e.channel.close();
+        return;
+      }
+      e.channel.binaryType = 'arraybuffer';
+      this.o.onInputChannel?.(e.channel);
+    };
   }
 
   get linkId(): string {
@@ -52,6 +65,10 @@ export class PeerLink {
 
   /** Anfitrión: añade las pistas (solo envío) y envía la oferta. */
   async startAsHost(stream: MediaStream): Promise<void> {
+    // Mando: sin orden ni retransmisiones (un estado viejo no sirve; solo importa el último).
+    const input = this.pc.createDataChannel(INPUT_CHANNEL_LABEL, { ordered: false, maxRetransmits: 0 });
+    input.binaryType = 'arraybuffer';
+    this.o.onInputChannel?.(input);
     for (const track of stream.getTracks()) {
       const t = this.pc.addTransceiver(track, { direction: 'sendonly', streams: [stream] });
       if (track.kind === 'video') {
@@ -137,6 +154,7 @@ export class PeerLink {
     this.pc.onicecandidate = null;
     this.pc.ontrack = null;
     this.pc.onconnectionstatechange = null;
+    this.pc.ondatachannel = null;
     this.pc.close();
     this.o.onState?.('closed');
   }

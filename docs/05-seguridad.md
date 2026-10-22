@@ -19,9 +19,9 @@ Leyenda: ✅ implementado y probado · 🔜 planificado para una fase posterior.
 | 11 | Token en registros o URLs | El token del WebSocket va en el primer mensaje, no en la URL; los registros solo muestran IDs públicos | ✅ |
 | 12 | Peticiones desde webs maliciosas (CSRF/CORS) | Lista blanca de orígenes para REST y WebSocket; sin cookies (Bearer) | ✅ |
 | 13 | Espionaje en tránsito | HTTPS/WSS mediante un proxy TLS; el medio WebRTC siempre va cifrado (DTLS-SRTP), también a través de TURN | ✅ DTLS-SRTP (obligatorio en WebRTC) · 🔜 TLS en el despliegue del backend |
-| 14 | Repetición o desorden de entradas del mando | Número de secuencia creciente, con descarte de `seq ≤ último` | 🔜 fase 5 |
-| 15 | Botones "pegados" tras un corte | Watchdog de 500 ms → estado neutro; destrucción del mando al desconectar | 🔜 fase 5 |
-| 16 | Entradas remotas convertidas en teclado o ratón | El agente de entrada solo expone un mando Xbox virtual (ViGEm); no hay API de teclado ni ratón | 🔜 fase 5 |
+| 14 | Repetición o desorden de entradas del mando | Número de secuencia creciente, con descarte de `seq ≤ último`; límite de 250 tramas/s | ✅ unitarias |
+| 15 | Botones "pegados" tras un corte | Watchdog de 500 ms → estado neutro; destrucción del mando al cerrar la app, la sala o con la tecla de emergencia | ✅ e2e con XInput real |
+| 16 | Entradas remotas convertidas en teclado o ratón | El agente solo expone un mando Xbox virtual (ViGEm); no hay API de teclado ni ratón. Botón Guide/PS bloqueado | ✅ |
 | 17 | El invitado accede a archivos, terminal o escritorio | No existe ningún canal para ello: solo vídeo/audio salientes y mensajes de mando entrantes | 🔜 se verificará en las fases 3–5 |
 | 18 | Captura de ventanas privadas | El anfitrión elige la ventana o pantalla en un selector propio. La captura solo se autoriza para esa fuente y una sola vez; cualquier otra petición de captura se deniega; cámara y micrófono denegados | ✅ verificado con e2e |
 | 18d | Señales WebRTC maliciosas | Validación estricta (tipo, tamaño y formato de SDP/ICE); la invitada solo acepta ofertas del anfitrión estando aprobada; conexiones `sendonly` (la invitada no puede enviar medios) | ✅ |

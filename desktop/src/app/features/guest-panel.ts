@@ -1,10 +1,11 @@
 import { Component, inject } from '@angular/core';
 import { SessionStore } from '../core/session.store';
+import { GuestGamepadPanel } from './guest-gamepad-panel';
 import { GuestStream } from './guest-stream';
 
 @Component({
   selector: 'app-guest-panel',
-  imports: [GuestStream],
+  imports: [GuestStream, GuestGamepadPanel],
   template: `
     @let me = store.me();
     @let host = store.hostParticipant();
@@ -39,6 +40,7 @@ import { GuestStream } from './guest-stream';
           </li>
         </ul>
       </section>
+      <app-guest-gamepad-panel />
     }
   `,
 })
