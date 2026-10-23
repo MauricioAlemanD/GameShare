@@ -11,7 +11,7 @@ export interface Instance {
 }
 
 /** Abre una instancia de la app con un perfil limpio y aislado. */
-export async function launch(profile: string): Promise<Instance> {
+export async function launch(profile: string, backendUrl?: string): Promise<Instance> {
   const userData = path.join(process.env['APPDATA']!, `GameShare-${profile}`);
   fs.rmSync(userData, { recursive: true, force: true });
 
@@ -20,7 +20,7 @@ export async function launch(profile: string): Promise<Instance> {
     if (v !== undefined && k !== 'ELECTRON_RUN_AS_NODE') env[k] = v;
   }
   env['GAMESHARE_PROFILE'] = profile;
-  env['GAMESHARE_BACKEND_URL'] = process.env['E2E_BACKEND_URL']!;
+  env['GAMESHARE_BACKEND_URL'] = backendUrl ?? process.env['E2E_BACKEND_URL']!;
 
   const app = await electron.launch({ args: ['.'], cwd: ROOT, env });
   const page = await app.firstWindow();

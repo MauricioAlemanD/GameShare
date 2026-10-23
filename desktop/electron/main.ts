@@ -49,8 +49,12 @@ let settings: SettingsStore;
 const capture = new CaptureController(() => mainWindow, (url) => isTrustedUrl(url));
 
 // ---- Mandos remotos: el agente (.NET + ViGEmBus) solo se lanza en el anfitrión al conceder el primer mando.
+// Instalada: resources/input-agent/ · En desarrollo: ../input-agent/dist/
 const AGENT_EXE =
-  process.env['GAMESHARE_INPUT_AGENT'] || path.resolve(__dirname, '..', '..', 'input-agent', 'dist', 'InputAgent.exe');
+  process.env['GAMESHARE_INPUT_AGENT'] ||
+  (app.isPackaged
+    ? path.join(process.resourcesPath, 'input-agent', 'InputAgent.exe')
+    : path.resolve(__dirname, '..', '..', 'input-agent', 'dist', 'InputAgent.exe'));
 let agentProc: InputAgentProcess | null = null;
 const gateway = new InputGateway(
   (line) => {

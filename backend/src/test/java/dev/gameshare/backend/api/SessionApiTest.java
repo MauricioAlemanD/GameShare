@@ -143,6 +143,14 @@ class SessionApiTest {
         assertThat(ok.status()).isEqualTo(200);
         assertThat(ok.raw().headers().firstValue("Access-Control-Allow-Origin")).hasValue("app://gameshare");
 
+        // La app envía la clave de anfitrión en X-Host-Key: el navegador necesita que el preflight la permita.
+        Map<String, String> withKey = Map.of("Origin", "app://gameshare", "Access-Control-Request-Method", "POST",
+                "Access-Control-Request-Headers", "content-type,x-host-key");
+        Response keyOk = api.call("OPTIONS", "/api/sessions", null, null, withKey);
+        assertThat(keyOk.status()).isEqualTo(200);
+        assertThat(keyOk.raw().headers().firstValue("Access-Control-Allow-Headers").orElse("").toLowerCase())
+                .contains("x-host-key").contains("content-type");
+
         Map<String, String> evil = Map.of("Origin", "https://evil.example", "Access-Control-Request-Method", "POST");
         assertThat(api.call("OPTIONS", "/api/sessions", null, null, evil).status()).isEqualTo(403);
     }

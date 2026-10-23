@@ -47,3 +47,4 @@ Thumbs.db
 /dist-electron
 /test-results
 /playwright-report
+/release
